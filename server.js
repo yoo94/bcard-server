@@ -68,4 +68,18 @@ app.post('/selectData', async (req, res) => {
     }
 });
 
+app.get('/selectData', async (req, res) => {
+    const { auth } = req.query;
+
+    try {
+        const collection = await connectToDatabase();
+
+        const users = await collection.find({ auth }).toArray();
+        res.status(200).send(users);
+    } catch (error) {
+        console.error('Error retrieving data:', error);
+        res.status(500).send({ error: '데이터 출력 중 오류가 발생했습니다.' });
+    }
+});
+
 app.listen(port, () => console.log(`Server is listening on http://localhost:${port}`));
