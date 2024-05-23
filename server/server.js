@@ -1,5 +1,4 @@
 import express from 'express';
-import ViteExpress from 'vite-express';
 import { MongoClient } from 'mongodb';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -8,36 +7,61 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
-const port = 3000;
-const url = "mongodb+srv://user1:<1q2w3e4r5t6y7u8i9o0p>@react-pwa-getbcard.8akafap.mongodb.net/?retryWrites=true&w=majority&appName=react-pwa-getbcard";
+const port = process.env.PORT || 3000;
+const mongoUrl = process.env.MONGO_URL; // .env 파일에 MONGO_URL을 설정하세요
 
 app.use(cors());
 app.use(express.json());
 
-app.post('/insertData', async (req, res) => {
-    const { id, name, hpNum, company, email, image } = req.body;
-    const client = new MongoClient(url);
+// 기본 라우트
+app.get('/', (req, res) => {
+    res.send('서버가 정상적으로 작동 중입니다.');
+});
+
+app.post('/onCreate', async (req, res) => {
+    const { _id, name, hpNum, company, email, image, auth } = req.body;
+    const client = new MongoClient(mongoUrl);
 
     try {
         await client.connect();
         const database = client.db('bcard');
         const collection = database.collection('bcardlist');
+        const data = {
+            name: name,
+            hpNum: hpNum,
+            company: company,
+            email: email,
+            image: image,
+            auth: auth
+        }
+        const result = await collection.insertOne(data);
 
-        const user = await collection.insertOne({
-            id:id,
-            name:name,
-            hpNum:hpNum,
-            company:company,
-            email:email,
-            image:image
-        });
-        res.status(200).send(user);
+        res.status(200).send(result);
     } catch (error) {
-        res.status(500).send(error);
+        console.error('Error inserting data:', error);
+        res.status(500).send({ error: '데이터 삽입 중 오류가 발생했습니다.' });
     } finally {
         await client.close();
     }
 });
 
-// ViteExpress를 사용하여 Vite와 함께 서버 실행
-ViteExpress.listen(app, port, () => console.log(`Server is listening on http://localhost:${port}`));
+app.post('/selectData', async (req, res) => {
+    const { auth } = req.body;
+    const client = new MongoClient(mongoUrl);
+    const data = { auth: auth }
+    try {
+        await client.connect();
+        const database = client.db('bcard');
+        const collection = database.collection('bcardlist');
+
+        const users = await collection.find(data).toArray();
+        res.status(200).send(users);
+    } catch (error) {
+        console.error('Error retrieving data:', error); // 추가: 오류 로그
+        res.status(500).send({ error: '데이터 출력 중 오류가 발생했습니다.' });
+    } finally {
+        await client.close();
+    }
+});
+
+app.listen(port, () => console.log(`Server is listening on http://localhost:${port}`));
