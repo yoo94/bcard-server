@@ -17,8 +17,6 @@ let client;
 async function connectToDatabase() {
     if (!client) {
         client = new MongoClient(mongoUrl, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
             serverSelectionTimeoutMS: 5000,
             maxPoolSize: 10 // 연결 풀 크기 설정
         });
@@ -65,6 +63,25 @@ app.post('/selectData', async (req, res) => {
     } catch (error) {
         console.error('Error retrieving data:', error);
         res.status(500).send({ error: '데이터 출력 중 오류가 발생했습니다.' });
+    }
+});
+
+
+app.delete('/onDelete', async (req, res) => {
+    const { auth, _id } = req.body;
+
+    try {
+        const collection = await connectToDatabase();
+
+        const result = await collection.deleteOne({ auth, _id: new ObjectId(_id) });
+        if (result.deletedCount === 1) {
+            res.status(200).send({ message: '삭제되었습니다.' });
+        } else {
+            res.status(404).send({ message: '해당 데이터를 찾을 수 없습니다.' });
+        }
+    } catch (error) {
+        console.error('Error deleting data:', error);
+        res.status(500).send({ error: '데이터 삭제 중 오류가 발생했습니다.' });
     }
 });
 
